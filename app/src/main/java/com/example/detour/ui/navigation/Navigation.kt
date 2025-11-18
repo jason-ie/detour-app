@@ -4,10 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.detour.data.MockData
 import com.example.detour.ui.results.ResultsScreen
 import com.example.detour.ui.search.SearchScreen
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun DetourNavigation() {
@@ -19,23 +18,19 @@ fun DetourNavigation() {
     ) {
         composable("search") {
             SearchScreen(
-                onSearchClick = { origin, destination, duration, selectedCities ->
-                    // URL encode the strings to handle spaces and special characters
-                    val encodedOrigin = URLEncoder.encode(origin, StandardCharsets.UTF_8.toString())
-                    val encodedDest = URLEncoder.encode(destination, StandardCharsets.UTF_8.toString())
-
+                onSearchClick = { originCode, destinationCode, duration, selectedCities ->
                     // Store selectedCities in savedStateHandle
                     navController.currentBackStackEntry?.savedStateHandle?.set("selectedCities", selectedCities)
 
-                    // Navigate with encoded params
-                    navController.navigate("results/$encodedOrigin/$encodedDest/$duration")
+                    // Navigate with clean airport codes
+                    navController.navigate("results/$originCode/$destinationCode/$duration")
                 }
             )
         }
 
         composable("results/{origin}/{destination}/{duration}") { backStackEntry ->
-            val origin = backStackEntry.arguments?.getString("origin") ?: "Hong Kong (HKG)"
-            val destination = backStackEntry.arguments?.getString("destination") ?: "Bali (DPS)"
+            val originCode = backStackEntry.arguments?.getString("origin") ?: "HKG"
+            val destinationCode = backStackEntry.arguments?.getString("destination") ?: "DPS"
             val duration = backStackEntry.arguments?.getString("duration")?.toIntOrNull() ?: 7
 
             // Retrieve selectedCities from savedStateHandle
@@ -43,9 +38,13 @@ fun DetourNavigation() {
                 ?.savedStateHandle
                 ?.get<List<String>>("selectedCities") ?: emptyList()
 
+            // Find city names from codes
+            val originCity = MockData.PopularCities.allCities.find { it.iataCode == originCode }
+            val destinationCity = MockData.PopularCities.allCities.find { it.iataCode == destinationCode }
+
             ResultsScreen(
-                origin = origin,
-                destination = destination,
+                origin = originCity?.let { "${it.name} (${it.iataCode})" } ?: originCode,
+                destination = destinationCity?.let { "${it.name} (${it.iataCode})" } ?: destinationCode,
                 tripDuration = duration,
                 selectedCities = selectedCities,
                 onBackClick = {
