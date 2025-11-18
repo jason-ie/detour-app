@@ -227,12 +227,13 @@ fun SearchScreen(
                 onClick = {
                     onSearchClick(origin, destination, tripDuration, selectedCities.toList())
                 },
+                enabled = selectedDateMillis != null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Search Flights",
+                    text = if (selectedDateMillis != null) "Search Flights" else "Select a date first",
                     style = MaterialTheme.typography.titleMedium
                 )
             }

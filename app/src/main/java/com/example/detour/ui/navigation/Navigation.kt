@@ -1,12 +1,13 @@
 package com.example.detour.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.detour.ui.results.ResultsScreen
 import com.example.detour.ui.search.SearchScreen
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun DetourNavigation() {
@@ -19,9 +20,15 @@ fun DetourNavigation() {
         composable("search") {
             SearchScreen(
                 onSearchClick = { origin, destination, duration, selectedCities ->
-                    // Navigate with basic params in route, pass selectedCities via savedStateHandle
+                    // URL encode the strings to handle spaces and special characters
+                    val encodedOrigin = URLEncoder.encode(origin, StandardCharsets.UTF_8.toString())
+                    val encodedDest = URLEncoder.encode(destination, StandardCharsets.UTF_8.toString())
+
+                    // Store selectedCities in savedStateHandle
                     navController.currentBackStackEntry?.savedStateHandle?.set("selectedCities", selectedCities)
-                    navController.navigate("results/$origin/$destination/$duration")
+
+                    // Navigate with encoded params
+                    navController.navigate("results/$encodedOrigin/$encodedDest/$duration")
                 }
             )
         }
