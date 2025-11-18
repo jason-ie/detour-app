@@ -2,6 +2,60 @@ package com.example.detour.data
 
 object MockData {
 
+    // Popular Cities for Stopover Selection
+    data class City(
+        val name: String,
+        val iataCode: String,
+        val region: String  // "Southeast Asia" or "East Asia"
+    )
+
+    object PopularCities {
+        // Southeast Asia Cities (9)
+        val southeastAsiaCities = listOf(
+            City("Kuala Lumpur", "KUL", "Southeast Asia"),
+            City("Singapore", "SIN", "Southeast Asia"),
+            City("Bangkok", "BKK", "Southeast Asia"),
+            City("Jakarta", "CGK", "Southeast Asia"),
+            City("Phuket", "HKT", "Southeast Asia"),
+            City("Ho Chi Minh City", "SGN", "Southeast Asia"),
+            City("Hanoi", "HAN", "Southeast Asia"),
+            City("Manila", "MNL", "Southeast Asia"),
+            City("Chiang Mai", "CNX", "Southeast Asia")
+        )
+
+        // East Asia Cities (5)
+        val eastAsiaCities = listOf(
+            City("Taipei", "TPE", "East Asia"),
+            City("Seoul", "ICN", "East Asia"),
+            City("Tokyo", "NRT", "East Asia"),
+            City("Osaka", "KIX", "East Asia"),
+            City("Shanghai", "PVG", "East Asia")
+        )
+
+        // All cities combined
+        val allCities = southeastAsiaCities + eastAsiaCities
+
+        /**
+         * Get suggested cities based on destination
+         * Returns 5 most relevant cities for the destination
+         */
+        fun getSuggestedCities(destination: String): List<City> {
+            // Extract airport code from destination (e.g., "Bali (DPS)" -> "DPS")
+            val destCode = destination.substringAfterLast("(").substringBefore(")")
+
+            // Southeast Asia destination codes
+            val southeastAsiaDestinations = listOf("DPS", "HKT", "BKK", "SGN", "REP", "CNX", "MNL", "CGK", "HAN")
+
+            return if (southeastAsiaDestinations.contains(destCode)) {
+                // Suggest Southeast Asia cities
+                southeastAsiaCities.take(5)
+            } else {
+                // Mix: 3 Southeast Asia + 2 East Asia
+                southeastAsiaCities.take(3) + eastAsiaCities.take(2)
+            }
+        }
+    }
+
     // Data classes matching Amadeus API structure
     data class FlightOffer(
         val id: String,

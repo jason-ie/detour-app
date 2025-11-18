@@ -17,6 +17,10 @@ import com.example.detour.data.MockData
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultsScreen(
+    origin: String,
+    destination: String,
+    tripDuration: Int,
+    selectedCities: List<String>,
     onBackClick: () -> Unit
 ) {
     val allOffers = MockData.getAllFlightOffers()
@@ -42,6 +46,14 @@ fun ResultsScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+            // Round-trip context display
+            Text(
+                text = "Round-trip from $origin to $destination ($tripDuration days${if (selectedCities.isNotEmpty()) ", ${selectedCities.size} cities selected" else ""})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
             // Savings Card (Most Prominent)
             Card(
                 modifier = Modifier
