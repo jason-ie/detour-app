@@ -29,23 +29,24 @@ fun SearchScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var tripDuration by remember { mutableIntStateOf(7) }
 
-    // City selection state
-    var showAllCities by remember { mutableStateOf(false) }
-    val suggestedCities = remember(selectedDestination) {
-        selectedDestination?.let {
-            MockData.PopularCities.getSuggestedCities("${it.name} (${it.iataCode})")
-        } ?: MockData.PopularCities.getSuggestedCities("")
+    // City selection state - only show region-relevant cities
+    val stopoverCities = remember(selectedDestination) {
+        selectedDestination?.let { dest ->
+            // Show only cities from the same region as destination
+            if (dest.region == "Southeast Asia") {
+                MockData.PopularCities.southeastAsiaCities.filter { it.iataCode != dest.iataCode }
+            } else {
+                MockData.PopularCities.eastAsiaCities.filter { it.iataCode != dest.iataCode }
+            }
+        } ?: emptyList()
     }
-    val citiesToShow = if (showAllCities) MockData.PopularCities.allCities else suggestedCities
-    val selectedCities = remember { mutableStateListOf<String>().apply {
-        // Pre-select all suggested cities by default
-        addAll(suggestedCities.map { it.iataCode })
-    } }
 
-    // Update selected cities when destination changes
+    val selectedCities = remember { mutableStateListOf<String>() }
+
+    // Update selected cities when destination changes - pre-select all
     LaunchedEffect(selectedDestination) {
         selectedCities.clear()
-        selectedCities.addAll(suggestedCities.map { it.iataCode })
+        selectedCities.addAll(stopoverCities.map { it.iataCode })
     }
 
     // Date formatter for display
@@ -94,61 +95,46 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // City Selection Section
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Cities to visit along the way (optional stopovers)",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                // City chips in a flow layout
-                FlowRow(
-                    mainAxisSpacing = 8.dp,
-                    crossAxisSpacing = 8.dp,
+            // City Selection Section - Only show if destination is selected
+            if (stopoverCities.isNotEmpty()) {
+                Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    citiesToShow.forEach { city ->
-                        FilterChip(
-                            selected = selectedCities.contains(city.iataCode),
-                            onClick = {
-                                if (selectedCities.contains(city.iataCode)) {
-                                    selectedCities.remove(city.iataCode)
-                                } else {
-                                    selectedCities.add(city.iataCode)
-                                }
-                            },
-                            label = { Text(city.name) },
-                            leadingIcon = if (selectedCities.contains(city.iataCode)) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                    )
-                                }
-                            } else null
-                        )
-                    }
-                }
+                    Text(
+                        text = "Cities to visit along the way (optional stopovers)",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
 
-                // Show more/less cities button
-                if (!showAllCities && MockData.PopularCities.allCities.size > suggestedCities.size) {
-                    TextButton(
-                        onClick = { showAllCities = true },
-                        modifier = Modifier.padding(top = 8.dp)
+                    // City chips in a flow layout
+                    FlowRow(
+                        mainAxisSpacing = 8.dp,
+                        crossAxisSpacing = 8.dp,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Show more cities (${MockData.PopularCities.allCities.size - suggestedCities.size} more) ▼")
-                    }
-                } else if (showAllCities) {
-                    TextButton(
-                        onClick = { showAllCities = false },
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Text("Show less ▲")
+                        stopoverCities.forEach { city ->
+                            FilterChip(
+                                selected = selectedCities.contains(city.iataCode),
+                                onClick = {
+                                    if (selectedCities.contains(city.iataCode)) {
+                                        selectedCities.remove(city.iataCode)
+                                    } else {
+                                        selectedCities.add(city.iataCode)
+                                    }
+                                },
+                                label = { Text(city.name) },
+                                leadingIcon = if (selectedCities.contains(city.iataCode)) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
                     }
                 }
             }
@@ -314,15 +300,26 @@ fun CityAutocomplete(
     onCitySelected: (MockData.City) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var searchText by remember { mutableStateOf(selectedCity?.let { "${it.name} (${it.iataCode})" } ?: "") }
+    var searchText by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     val allCities = MockData.PopularCities.allCities
 
-    // Filter cities based on search text
-    val filteredCities = remember(searchText) {
+    // Update display when city is selected
+    LaunchedEffect(selectedCity) {
+        if (selectedCity != null && searchText != "${selectedCity.name} (${selectedCity.iataCode})") {
+            searchText = "${selectedCity.name} (${selectedCity.iataCode})"
+        }
+    }
+
+    // Filter cities based on search text - only show when user is typing
+    val filteredCities = remember(searchText, selectedCity) {
         if (searchText.isEmpty()) {
-            allCities
+            emptyList()
+        } else if (selectedCity != null && searchText == "${selectedCity.name} (${selectedCity.iataCode})") {
+            // User has selected a city and hasn't changed the text
+            emptyList()
         } else {
+            // User is actively typing/searching
             allCities.filter { city ->
                 city.name.contains(searchText, ignoreCase = true) ||
                 city.iataCode.contains(searchText, ignoreCase = true)
@@ -331,30 +328,26 @@ fun CityAutocomplete(
     }
 
     ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
+        expanded = expanded && filteredCities.isNotEmpty(),
+        onExpandedChange = { },
         modifier = modifier
     ) {
         OutlinedTextField(
             value = searchText,
             onValueChange = {
                 searchText = it
-                expanded = true
+                expanded = it.isNotEmpty()
             },
             label = { Text(label) },
             placeholder = { Text("Type to search...") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor()
         )
 
-        if (filteredCities.isNotEmpty()) {
+        if (filteredCities.isNotEmpty() && expanded) {
             ExposedDropdownMenu(
-                expanded = expanded,
+                expanded = true,
                 onDismissRequest = { expanded = false },
                 modifier = Modifier.heightIn(max = 300.dp)
             ) {
