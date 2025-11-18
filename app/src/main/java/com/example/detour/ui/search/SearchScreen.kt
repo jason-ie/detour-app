@@ -1,6 +1,5 @@
 package com.example.detour.ui.search
 
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -222,21 +221,16 @@ fun SearchScreen(
 
             Button(
                 onClick = {
-                    Log.d("SearchScreen", "Button clicked! Origin: $selectedOrigin, Dest: $selectedDestination, Date: $selectedDateMillis")
                     selectedOrigin?.let { origin ->
-                        Log.d("SearchScreen", "Origin is not null: ${origin.name} (${origin.iataCode})")
                         selectedDestination?.let { destination ->
-                            Log.d("SearchScreen", "Destination is not null: ${destination.name} (${destination.iataCode})")
-                            Log.d("SearchScreen", "Calling onSearchClick with: ${origin.iataCode}, ${destination.iataCode}, $tripDuration, ${selectedCities.toList()}")
                             onSearchClick(
                                 origin.iataCode,
                                 destination.iataCode,
                                 tripDuration,
                                 selectedCities.toList()
                             )
-                            Log.d("SearchScreen", "onSearchClick completed")
-                        } ?: Log.d("SearchScreen", "Destination is null!")
-                    } ?: Log.d("SearchScreen", "Origin is null!")
+                        }
+                    }
                 },
                 enabled = selectedOrigin != null && selectedDestination != null && selectedDateMillis != null,
                 modifier = Modifier
@@ -306,7 +300,10 @@ fun CityAutocomplete(
     onCitySelected: (MockData.City) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var searchText by remember { mutableStateOf("") }
+    // Initialize searchText from selectedCity so it persists across recompositions
+    var searchText by remember(selectedCity) {
+        mutableStateOf(selectedCity?.let { "${it.name} (${it.iataCode})" } ?: "")
+    }
     var expanded by remember { mutableStateOf(false) }
     val allCities = MockData.PopularCities.allCities
 
@@ -315,9 +312,18 @@ fun CityAutocomplete(
         if (searchText.isEmpty()) {
             emptyList()
         } else {
-            allCities.filter { city ->
-                city.name.contains(searchText, ignoreCase = true) ||
-                city.iataCode.contains(searchText, ignoreCase = true)
+            // Don't show dropdown if text exactly matches selected city
+            val matchesSelected = selectedCity?.let {
+                searchText == "${it.name} (${it.iataCode})"
+            } ?: false
+
+            if (matchesSelected) {
+                emptyList()
+            } else {
+                allCities.filter { city ->
+                    city.name.contains(searchText, ignoreCase = true) ||
+                    city.iataCode.contains(searchText, ignoreCase = true)
+                }
             }
         }
     }
