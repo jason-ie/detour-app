@@ -23,20 +23,30 @@ import java.util.*
 fun SearchScreen(
     onSearchClick: (String, String, Int, List<String>) -> Unit
 ) {
-    var origin by remember { mutableStateOf("Hong Kong (HKG)") }
-    var destination by remember { mutableStateOf("Bali (DPS)") }
+    var selectedOrigin by remember { mutableStateOf<MockData.City?>(null) }
+    var selectedDestination by remember { mutableStateOf<MockData.City?>(null) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var tripDuration by remember { mutableIntStateOf(7) }
 
     // City selection state
     var showAllCities by remember { mutableStateOf(false) }
-    val suggestedCities = remember(destination) { MockData.PopularCities.getSuggestedCities(destination) }
+    val suggestedCities = remember(selectedDestination) {
+        selectedDestination?.let {
+            MockData.PopularCities.getSuggestedCities("${it.name} (${it.iataCode})")
+        } ?: MockData.PopularCities.getSuggestedCities("")
+    }
     val citiesToShow = if (showAllCities) MockData.PopularCities.allCities else suggestedCities
     val selectedCities = remember { mutableStateListOf<String>().apply {
         // Pre-select all suggested cities by default
         addAll(suggestedCities.map { it.iataCode })
     } }
+
+    // Update selected cities when destination changes
+    LaunchedEffect(selectedDestination) {
+        selectedCities.clear()
+        selectedCities.addAll(suggestedCities.map { it.iataCode })
+    }
 
     // Date formatter for display
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
@@ -64,21 +74,21 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Origin Input
-            OutlinedTextField(
-                value = origin,
-                onValueChange = { origin = it },
-                label = { Text("Starting from (your home city)") },
+            // Origin Autocomplete
+            CityAutocomplete(
+                label = "Starting from (your home city)",
+                selectedCity = selectedOrigin,
+                onCitySelected = { selectedOrigin = it },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Destination Input
-            OutlinedTextField(
-                value = destination,
-                onValueChange = { destination = it },
-                label = { Text("Main destination") },
+            // Destination Autocomplete
+            CityAutocomplete(
+                label = "Main destination",
+                selectedCity = selectedDestination,
+                onCitySelected = { selectedDestination = it },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -225,15 +235,28 @@ fun SearchScreen(
 
             Button(
                 onClick = {
-                    onSearchClick(origin, destination, tripDuration, selectedCities.toList())
+                    selectedOrigin?.let { origin ->
+                        selectedDestination?.let { destination ->
+                            onSearchClick(
+                                origin.iataCode,
+                                destination.iataCode,
+                                tripDuration,
+                                selectedCities.toList()
+                            )
+                        }
+                    }
                 },
-                enabled = selectedDateMillis != null,
+                enabled = selectedOrigin != null && selectedDestination != null && selectedDateMillis != null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
                 Text(
-                    text = if (selectedDateMillis != null) "Search Flights" else "Select a date first",
+                    text = when {
+                        selectedOrigin == null || selectedDestination == null -> "Select origin and destination"
+                        selectedDateMillis == null -> "Select a date"
+                        else -> "Search Flights"
+                    },
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -279,6 +302,90 @@ fun SearchScreen(
             }
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CityAutocomplete(
+    label: String,
+    selectedCity: MockData.City?,
+    onCitySelected: (MockData.City) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var searchText by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    val allCities = MockData.PopularCities.allCities
+
+    // Filter cities based on search text
+    val filteredCities = remember(searchText) {
+        if (searchText.isEmpty()) {
+            allCities
+        } else {
+            allCities.filter { city ->
+                city.name.contains(searchText, ignoreCase = true) ||
+                city.iataCode.contains(searchText, ignoreCase = true)
+            }
+        }
+    }
+
+    // Update search text when city is selected
+    LaunchedEffect(selectedCity) {
+        searchText = selectedCity?.let { "${it.name} (${it.iataCode})" } ?: ""
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = searchText,
+            onValueChange = {
+                searchText = it
+                expanded = true
+            },
+            label = { Text(label) },
+            placeholder = { Text("Type to search...") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+
+        if (filteredCities.isNotEmpty()) {
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.heightIn(max = 300.dp)
+            ) {
+                filteredCities.forEach { city ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(
+                                    text = city.name,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = "${city.iataCode} · ${city.region}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        onClick = {
+                            onCitySelected(city)
+                            searchText = "${city.name} (${city.iataCode})"
+                            expanded = false
+                        }
+                    )
+                }
+            }
         }
     }
 }
