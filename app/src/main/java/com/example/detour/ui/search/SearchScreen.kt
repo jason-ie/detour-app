@@ -1,5 +1,6 @@
 package com.example.detour.ui.search
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -221,16 +222,21 @@ fun SearchScreen(
 
             Button(
                 onClick = {
+                    Log.d("SearchScreen", "Button clicked! Origin: $selectedOrigin, Dest: $selectedDestination, Date: $selectedDateMillis")
                     selectedOrigin?.let { origin ->
+                        Log.d("SearchScreen", "Origin is not null: ${origin.name} (${origin.iataCode})")
                         selectedDestination?.let { destination ->
+                            Log.d("SearchScreen", "Destination is not null: ${destination.name} (${destination.iataCode})")
+                            Log.d("SearchScreen", "Calling onSearchClick with: ${origin.iataCode}, ${destination.iataCode}, $tripDuration, ${selectedCities.toList()}")
                             onSearchClick(
                                 origin.iataCode,
                                 destination.iataCode,
                                 tripDuration,
                                 selectedCities.toList()
                             )
-                        }
-                    }
+                            Log.d("SearchScreen", "onSearchClick completed")
+                        } ?: Log.d("SearchScreen", "Destination is null!")
+                    } ?: Log.d("SearchScreen", "Origin is null!")
                 },
                 enabled = selectedOrigin != null && selectedDestination != null && selectedDateMillis != null,
                 modifier = Modifier
@@ -304,22 +310,11 @@ fun CityAutocomplete(
     var expanded by remember { mutableStateOf(false) }
     val allCities = MockData.PopularCities.allCities
 
-    // Update display when city is selected
-    LaunchedEffect(selectedCity) {
-        if (selectedCity != null && searchText != "${selectedCity.name} (${selectedCity.iataCode})") {
-            searchText = "${selectedCity.name} (${selectedCity.iataCode})"
-        }
-    }
-
     // Filter cities based on search text - only show when user is typing
-    val filteredCities = remember(searchText, selectedCity) {
+    val filteredCities = remember(searchText) {
         if (searchText.isEmpty()) {
             emptyList()
-        } else if (selectedCity != null && searchText == "${selectedCity.name} (${selectedCity.iataCode})") {
-            // User has selected a city and hasn't changed the text
-            emptyList()
         } else {
-            // User is actively typing/searching
             allCities.filter { city ->
                 city.name.contains(searchText, ignoreCase = true) ||
                 city.iataCode.contains(searchText, ignoreCase = true)
