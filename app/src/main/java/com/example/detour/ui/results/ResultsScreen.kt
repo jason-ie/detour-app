@@ -19,9 +19,10 @@ import com.example.detour.data.MockData
 fun ResultsScreen(
     onBackClick: () -> Unit
 ) {
-    val directFlight = MockData.getDirectFlight()
-    val multiStop = MockData.getMultiStopRoute()
-    val savings = MockData.getSavings()
+    val allOffers = MockData.getAllFlightOffers()
+    val directFlight = allOffers[0]  // Direct flight
+    val bestDetourOffer = allOffers[2]  // Multi-city detour route with best savings
+    val savings = MockData.calculateSavings(bestDetourOffer)
 
     Scaffold(
         topBar = {
@@ -63,7 +64,7 @@ fun ResultsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "$${savings} HKD",
+                        text = "${savings.toInt()} HKD",
                         style = MaterialTheme.typography.displayMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -77,16 +78,16 @@ fun ResultsScreen(
             }
 
             // Direct Flight Option
-            RouteCard(
-                route = directFlight,
+            FlightOfferCard(
+                offer = directFlight,
                 isRecommended = false
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Multi-Stop Option
-            RouteCard(
-                route = multiStop,
+            // Multi-Stop Detour Option
+            FlightOfferCard(
+                offer = bestDetourOffer,
                 isRecommended = true
             )
         }
@@ -94,10 +95,28 @@ fun ResultsScreen(
 }
 
 @Composable
-fun RouteCard(
-    route: MockData.FlightRoute,
+fun FlightOfferCard(
+    offer: MockData.FlightOffer,
     isRecommended: Boolean
 ) {
+    val itinerary = offer.itineraries.first()
+    val segments = itinerary.segments
+
+    // Build route description (e.g., "HKG → KUL → DPS → HKT")
+    val routeDescription = segments.joinToString(" → ") { segment ->
+        MockData.getAirportName(segment.departure.iataCode)
+    } + " → " + MockData.getAirportName(segments.last().arrival.iataCode)
+
+    // Flight type name
+    val flightTypeName = when (segments.size) {
+        1 -> "Direct Flight"
+        2 -> "Multi-Stop via ${MockData.getAirportName(segments[0].arrival.iataCode)}"
+        else -> "Multi-City Detour"
+    }
+
+    // Total number of segments (connections)
+    val numberOfConnections = segments.size - 1
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -114,7 +133,7 @@ fun RouteCard(
             ) {
                 Column {
                     Text(
-                        text = route.routeName,
+                        text = flightTypeName,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -134,7 +153,7 @@ fun RouteCard(
                 }
 
                 Text(
-                    text = "$${route.price} HKD",
+                    text = "${offer.price.grandTotal.toDouble().toInt()} HKD",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (isRecommended) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
@@ -144,7 +163,7 @@ fun RouteCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = route.description,
+                text = routeDescription,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -156,14 +175,22 @@ fun RouteCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = if (route.stops == 0) "Non-stop" else "${route.stops} stops",
+                    text = if (numberOfConnections == 0) "Non-stop" else "$numberOfConnections ${if (numberOfConnections == 1) "connection" else "connections"}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = route.duration,
+                    text = MockData.formatDuration(itinerary.duration),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+
+            // Display airline info
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Airlines: ${offer.validatingAirlineCodes.joinToString(", ") { MockData.getAirlineName(it) }}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
