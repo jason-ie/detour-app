@@ -10,8 +10,9 @@ object MockData {
     )
 
     object PopularCities {
-        // Southeast Asia Cities (9)
+        // Southeast Asia Cities (10)
         val southeastAsiaCities = listOf(
+            City("Bali", "DPS", "Southeast Asia"),
             City("Kuala Lumpur", "KUL", "Southeast Asia"),
             City("Singapore", "SIN", "Southeast Asia"),
             City("Bangkok", "BKK", "Southeast Asia"),
@@ -23,8 +24,9 @@ object MockData {
             City("Chiang Mai", "CNX", "Southeast Asia")
         )
 
-        // East Asia Cities (5)
+        // East Asia Cities (6)
         val eastAsiaCities = listOf(
+            City("Hong Kong", "HKG", "East Asia"),
             City("Taipei", "TPE", "East Asia"),
             City("Seoul", "ICN", "East Asia"),
             City("Tokyo", "NRT", "East Asia"),

@@ -314,7 +314,7 @@ fun CityAutocomplete(
     onCitySelected: (MockData.City) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var searchText by remember { mutableStateOf("") }
+    var searchText by remember { mutableStateOf(selectedCity?.let { "${it.name} (${it.iataCode})" } ?: "") }
     var expanded by remember { mutableStateOf(false) }
     val allCities = MockData.PopularCities.allCities
 
@@ -328,11 +328,6 @@ fun CityAutocomplete(
                 city.iataCode.contains(searchText, ignoreCase = true)
             }
         }
-    }
-
-    // Update search text when city is selected
-    LaunchedEffect(selectedCity) {
-        searchText = selectedCity?.let { "${it.name} (${it.iataCode})" } ?: ""
     }
 
     ExposedDropdownMenuBox(
