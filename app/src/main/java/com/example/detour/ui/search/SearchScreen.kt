@@ -2,6 +2,8 @@ package com.example.detour.ui.search
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import com.example.detour.data.MockData
 import com.google.accompanist.flowlayout.FlowRow
 import java.text.SimpleDateFormat
@@ -328,7 +331,7 @@ fun CityAutocomplete(
         }
     }
 
-    Box(modifier = modifier) {
+    Column(modifier = modifier) {
         OutlinedTextField(
             value = searchText,
             onValueChange = {
@@ -340,18 +343,27 @@ fun CityAutocomplete(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Use DropdownMenu instead of ExposedDropdownMenu to avoid focus stealing
-        DropdownMenu(
-            expanded = expanded && filteredCities.isNotEmpty(),
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .heightIn(max = 300.dp)
-        ) {
-            filteredCities.forEach { city ->
-                DropdownMenuItem(
-                    text = {
-                        Column {
+        // Show results in a Card below the TextField - doesn't steal focus
+        if (expanded && filteredCities.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp)
+                    .padding(top = 4.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                LazyColumn {
+                    items(filteredCities) { city ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onCitySelected(city)
+                                    searchText = "${city.name} (${city.iataCode})"
+                                    expanded = false
+                                }
+                                .padding(16.dp)
+                        ) {
                             Text(
                                 text = city.name,
                                 style = MaterialTheme.typography.bodyLarge
@@ -362,13 +374,11 @@ fun CityAutocomplete(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    },
-                    onClick = {
-                        onCitySelected(city)
-                        searchText = "${city.name} (${city.iataCode})"
-                        expanded = false
+                        if (city != filteredCities.last()) {
+                            HorizontalDivider()
+                        }
                     }
-                )
+                }
             }
         }
     }
