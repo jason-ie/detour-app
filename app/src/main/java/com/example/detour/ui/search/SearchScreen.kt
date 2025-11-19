@@ -257,9 +257,6 @@ fun SearchScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            // Extra bottom padding to ensure button is always reachable
-            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 
