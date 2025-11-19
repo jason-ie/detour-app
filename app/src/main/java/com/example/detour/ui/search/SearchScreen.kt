@@ -328,11 +328,7 @@ fun CityAutocomplete(
         }
     }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded && filteredCities.isNotEmpty(),
-        onExpandedChange = { },
-        modifier = modifier
-    ) {
+    Box(modifier = modifier) {
         OutlinedTextField(
             value = searchText,
             onValueChange = {
@@ -341,39 +337,38 @@ fun CityAutocomplete(
             },
             label = { Text(label) },
             placeholder = { Text("Type to search...") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
+            modifier = Modifier.fillMaxWidth()
         )
 
-        if (filteredCities.isNotEmpty() && expanded) {
-            ExposedDropdownMenu(
-                expanded = true,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.heightIn(max = 300.dp)
-            ) {
-                filteredCities.forEach { city ->
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(
-                                    text = city.name,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    text = "${city.iataCode} · ${city.region}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        },
-                        onClick = {
-                            onCitySelected(city)
-                            searchText = "${city.name} (${city.iataCode})"
-                            expanded = false
+        // Use DropdownMenu instead of ExposedDropdownMenu to avoid focus stealing
+        DropdownMenu(
+            expanded = expanded && filteredCities.isNotEmpty(),
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .heightIn(max = 300.dp)
+        ) {
+            filteredCities.forEach { city ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(
+                                text = city.name,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = "${city.iataCode} · ${city.region}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    )
-                }
+                    },
+                    onClick = {
+                        onCitySelected(city)
+                        searchText = "${city.name} (${city.iataCode})"
+                        expanded = false
+                    }
+                )
             }
         }
     }
