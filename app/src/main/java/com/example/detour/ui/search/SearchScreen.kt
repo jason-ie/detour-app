@@ -257,6 +257,9 @@ fun SearchScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            // Extra bottom padding to ensure button is always reachable
+            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 
@@ -348,7 +351,7 @@ fun CityAutocomplete(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 300.dp)
+                    .heightIn(max = 200.dp)
                     .padding(top = 4.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
