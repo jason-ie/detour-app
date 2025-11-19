@@ -19,8 +19,8 @@ fun DetourNavigation() {
         composable("search") {
             SearchScreen(
                 onSearchClick = { originCode, destinationCode, duration, selectedCities ->
-                    // Store selectedCities in savedStateHandle
-                    navController.currentBackStackEntry?.savedStateHandle?.set("selectedCities", selectedCities)
+                    // Store selectedCities in savedStateHandle - must convert to ArrayList for serialization
+                    navController.currentBackStackEntry?.savedStateHandle?.set("selectedCities", ArrayList(selectedCities))
 
                     // Navigate with clean airport codes
                     navController.navigate("results/$originCode/$destinationCode/$duration")

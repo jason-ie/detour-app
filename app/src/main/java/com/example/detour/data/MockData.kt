@@ -10,7 +10,7 @@ object MockData {
     )
 
     object PopularCities {
-        // Southeast Asia Cities (10)
+        // Southeast Asia Cities (9)
         val southeastAsiaCities = listOf(
             City("Bali", "DPS", "Southeast Asia"),
             City("Kuala Lumpur", "KUL", "Southeast Asia"),
@@ -18,7 +18,6 @@ object MockData {
             City("Bangkok", "BKK", "Southeast Asia"),
             City("Jakarta", "CGK", "Southeast Asia"),
             City("Phuket", "HKT", "Southeast Asia"),
-            City("Ho Chi Minh City", "SGN", "Southeast Asia"),
             City("Hanoi", "HAN", "Southeast Asia"),
             City("Manila", "MNL", "Southeast Asia"),
             City("Chiang Mai", "CNX", "Southeast Asia")
@@ -46,7 +45,7 @@ object MockData {
             val destCode = destination.substringAfterLast("(").substringBefore(")")
 
             // Southeast Asia destination codes
-            val southeastAsiaDestinations = listOf("DPS", "HKT", "BKK", "SGN", "REP", "CNX", "MNL", "CGK", "HAN")
+            val southeastAsiaDestinations = listOf("DPS", "HKT", "BKK", "REP", "CNX", "MNL", "CGK", "HAN")
 
             return if (southeastAsiaDestinations.contains(destCode)) {
                 // Suggest Southeast Asia cities

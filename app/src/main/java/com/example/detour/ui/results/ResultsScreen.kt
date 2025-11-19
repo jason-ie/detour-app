@@ -114,7 +114,7 @@ fun FlightOfferCard(
     val itinerary = offer.itineraries.first()
     val segments = itinerary.segments
 
-    // Build route description (e.g., "HKG → KUL → DPS → HKT")
+    // Build route description (ex:, "HKG → KUL → DPS → HKT")
     val routeDescription = segments.joinToString(" → ") { segment ->
         MockData.getAirportName(segment.departure.iataCode)
     } + " → " + MockData.getAirportName(segments.last().arrival.iataCode)

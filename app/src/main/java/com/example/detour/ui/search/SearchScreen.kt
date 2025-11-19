@@ -2,6 +2,8 @@ package com.example.detour.ui.search
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,23 +31,24 @@ fun SearchScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var tripDuration by remember { mutableIntStateOf(7) }
 
-    // City selection state
-    var showAllCities by remember { mutableStateOf(false) }
-    val suggestedCities = remember(selectedDestination) {
-        selectedDestination?.let {
-            MockData.PopularCities.getSuggestedCities("${it.name} (${it.iataCode})")
-        } ?: MockData.PopularCities.getSuggestedCities("")
+    // City selection state - only show region-relevant cities
+    val stopoverCities = remember(selectedDestination) {
+        selectedDestination?.let { dest ->
+            // Show only cities from the same region as destination
+            if (dest.region == "Southeast Asia") {
+                MockData.PopularCities.southeastAsiaCities.filter { it.iataCode != dest.iataCode }
+            } else {
+                MockData.PopularCities.eastAsiaCities.filter { it.iataCode != dest.iataCode }
+            }
+        } ?: emptyList()
     }
-    val citiesToShow = if (showAllCities) MockData.PopularCities.allCities else suggestedCities
-    val selectedCities = remember { mutableStateListOf<String>().apply {
-        // Pre-select all suggested cities by default
-        addAll(suggestedCities.map { it.iataCode })
-    } }
 
-    // Update selected cities when destination changes
+    val selectedCities = remember { mutableStateListOf<String>() }
+
+    // Update selected cities when destination changes - pre-select all
     LaunchedEffect(selectedDestination) {
         selectedCities.clear()
-        selectedCities.addAll(suggestedCities.map { it.iataCode })
+        selectedCities.addAll(stopoverCities.map { it.iataCode })
     }
 
     // Date formatter for display
@@ -94,61 +97,46 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // City Selection Section
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Cities to visit along the way (optional stopovers)",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                // City chips in a flow layout
-                FlowRow(
-                    mainAxisSpacing = 8.dp,
-                    crossAxisSpacing = 8.dp,
+            // City Selection Section - Only show if destination is selected
+            if (stopoverCities.isNotEmpty()) {
+                Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    citiesToShow.forEach { city ->
-                        FilterChip(
-                            selected = selectedCities.contains(city.iataCode),
-                            onClick = {
-                                if (selectedCities.contains(city.iataCode)) {
-                                    selectedCities.remove(city.iataCode)
-                                } else {
-                                    selectedCities.add(city.iataCode)
-                                }
-                            },
-                            label = { Text(city.name) },
-                            leadingIcon = if (selectedCities.contains(city.iataCode)) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                    )
-                                }
-                            } else null
-                        )
-                    }
-                }
+                    Text(
+                        text = "Cities to visit along the way (optional stopovers)",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
 
-                // Show more/less cities button
-                if (!showAllCities && MockData.PopularCities.allCities.size > suggestedCities.size) {
-                    TextButton(
-                        onClick = { showAllCities = true },
-                        modifier = Modifier.padding(top = 8.dp)
+                    // City chips in a flow layout
+                    FlowRow(
+                        mainAxisSpacing = 8.dp,
+                        crossAxisSpacing = 8.dp,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Show more cities (${MockData.PopularCities.allCities.size - suggestedCities.size} more) ▼")
-                    }
-                } else if (showAllCities) {
-                    TextButton(
-                        onClick = { showAllCities = false },
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Text("Show less ▲")
+                        stopoverCities.forEach { city ->
+                            FilterChip(
+                                selected = selectedCities.contains(city.iataCode),
+                                onClick = {
+                                    if (selectedCities.contains(city.iataCode)) {
+                                        selectedCities.remove(city.iataCode)
+                                    } else {
+                                        selectedCities.add(city.iataCode)
+                                    }
+                                },
+                                label = { Text(city.name) },
+                                leadingIcon = if (selectedCities.contains(city.iataCode)) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
                     }
                 }
             }
@@ -314,76 +302,81 @@ fun CityAutocomplete(
     onCitySelected: (MockData.City) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var searchText by remember { mutableStateOf("") }
+    // Initialize searchText from selectedCity so it persists
+    var searchText by remember(selectedCity) {
+        mutableStateOf(selectedCity?.let { "${it.name} (${it.iataCode})" } ?: "")
+    }
     var expanded by remember { mutableStateOf(false) }
     val allCities = MockData.PopularCities.allCities
 
-    // Filter cities based on search text
+    // Filter cities based on search text - only show when user is typing
     val filteredCities = remember(searchText) {
         if (searchText.isEmpty()) {
-            allCities
+            emptyList()
         } else {
-            allCities.filter { city ->
-                city.name.contains(searchText, ignoreCase = true) ||
-                        city.iataCode.contains(searchText, ignoreCase = true)
+            // Don't show dropdown if text exactly matches selected city
+            val matchesSelected = selectedCity?.let {
+                searchText == "${it.name} (${it.iataCode})"
+            } ?: false
+
+            if (matchesSelected) {
+                emptyList()
+            } else {
+                allCities.filter { city ->
+                    city.name.contains(searchText, ignoreCase = true) ||
+                            city.iataCode.contains(searchText, ignoreCase = true)
+                }
             }
         }
     }
 
-    // Update search text when city is selected
-    LaunchedEffect(selectedCity) {
-        searchText = selectedCity?.let { "${it.name} (${it.iataCode})" } ?: ""
-    }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = modifier
-    ) {
+    Column(modifier = modifier) {
         OutlinedTextField(
             value = searchText,
             onValueChange = {
                 searchText = it
-                expanded = true
+                expanded = it.isNotEmpty()
             },
             label = { Text(label) },
             placeholder = { Text("Type to search...") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
+            modifier = Modifier.fillMaxWidth()
         )
 
-        if (filteredCities.isNotEmpty()) {
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.heightIn(max = 300.dp)
+        // Show results in a Card below the TextField - doesn't steal focus
+        if (expanded && filteredCities.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp)
+                    .padding(top = 4.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                filteredCities.forEach { city ->
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(
-                                    text = city.name,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    text = "${city.iataCode} · ${city.region}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        },
-                        onClick = {
-                            onCitySelected(city)
-                            searchText = "${city.name} (${city.iataCode})"
-                            expanded = false
+                LazyColumn {
+                    items(filteredCities) { city ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onCitySelected(city)
+                                    searchText = "${city.name} (${city.iataCode})"
+                                    expanded = false
+                                }
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = city.name,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = "${city.iataCode} · ${city.region}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    )
+                        if (city != filteredCities.last()) {
+                            HorizontalDivider()
+                        }
+                    }
                 }
             }
         }
