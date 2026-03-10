@@ -18,17 +18,17 @@ fun DetourNavigation() {
     ) {
         composable("search") {
             SearchScreen(
-                onSearchClick = { originCode, destinationCode, duration, selectedCities ->
+                onSearchClick = { originCode, destinationCode, duration, selectedCities,startDate ->
                     // Store selectedCities in savedStateHandle - must convert to ArrayList for serialization
                     navController.currentBackStackEntry?.savedStateHandle?.set("selectedCities", ArrayList(selectedCities))
 
                     // Navigate with clean airport codes
-                    navController.navigate("results/$originCode/$destinationCode/$duration")
+                    navController.navigate("results/$originCode/$destinationCode/$duration/$startDate")
                 }
             )
         }
 
-        composable("results/{origin}/{destination}/{duration}") { backStackEntry ->
+        composable("results/{origin}/{destination}/{duration}/{startDate}") { backStackEntry ->
             val originCode = backStackEntry.arguments?.getString("origin") ?: "HKG"
             val destinationCode = backStackEntry.arguments?.getString("destination") ?: "DPS"
             val duration = backStackEntry.arguments?.getString("duration")?.toIntOrNull() ?: 7
@@ -41,12 +41,14 @@ fun DetourNavigation() {
             // Find city names from codes
             val originCity = MockData.PopularCities.allCities.find { it.iataCode == originCode }
             val destinationCity = MockData.PopularCities.allCities.find { it.iataCode == destinationCode }
+            val startDate = backStackEntry.arguments?.getString("startDate") ?: "2025-12-01"
 
             ResultsScreen(
                 origin = originCity?.let { "${it.name} (${it.iataCode})" } ?: originCode,
                 destination = destinationCity?.let { "${it.name} (${it.iataCode})" } ?: destinationCode,
                 tripDuration = duration,
                 selectedCities = selectedCities,
+                startDate = startDate,
                 onBackClick = {
                     navController.popBackStack()
                 }

@@ -20,10 +20,15 @@ import com.google.accompanist.flowlayout.FlowRow
 import java.text.SimpleDateFormat
 import java.util.*
 
+fun formatDateToApiString(millis: Long): String {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    return sdf.format(Date(millis))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    onSearchClick: (String, String, Int, List<String>) -> Unit
+    onSearchClick: (String, String, Int, List<String>, String) -> Unit
 ) {
     var selectedOrigin by remember { mutableStateOf<MockData.City?>(null) }
     var selectedDestination by remember { mutableStateOf<MockData.City?>(null) }
@@ -225,15 +230,25 @@ fun SearchScreen(
                 onClick = {
                     selectedOrigin?.let { origin ->
                         selectedDestination?.let { destination ->
+
+                            //GET_DATE: convert selectedDateMillis → "YYYY-MM-DD"
+                            val apiDate = selectedDateMillis?.let {
+                                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                sdf.format(Date(it))
+                            } ?: ""
+
+                            // SEND DATE INTO NAVIGATION
                             onSearchClick(
                                 origin.iataCode,
                                 destination.iataCode,
                                 tripDuration,
-                                selectedCities.toList()
+                                selectedCities.toList(),
+                                apiDate
                             )
                         }
                     }
                 },
+
                 enabled = selectedOrigin != null && selectedDestination != null && selectedDateMillis != null,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -342,7 +357,7 @@ fun CityAutocomplete(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Show results in a Card below the TextField - doesn't steal focus
+        // Show results in a Card below the TextField
         if (expanded && filteredCities.isNotEmpty()) {
             Card(
                 modifier = Modifier
